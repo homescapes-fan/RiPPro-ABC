@@ -1,0 +1,14 @@
+# 秘密情報
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# 生成した画像などの出力先
+out/
+
+# Windows / エディタが勝手に作るファイル
+Thumbs.db
+.vscode/
