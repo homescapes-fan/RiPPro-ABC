@@ -1,5 +1,8 @@
-# 秘密情報
+# 秘密情報（見本は.env.example）
 .env
+
+# 個人情報（見本はmembers.example.json）
+members.json
 
 # Python
 __pycache__/
