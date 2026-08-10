@@ -47,6 +47,7 @@ def build_rows(standings, members):
                     format_task_result(raw["TaskResults"].get(task_key_of[name]))
                     for name in tasks
                 ],
+                "is_rated": raw["IsRated"],
             }
         )
 

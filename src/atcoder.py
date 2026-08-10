@@ -13,6 +13,7 @@ from perf import (
     predict_performance,
     rated_rank_resolver,
 )
+from rating import predict_new_rating
 
 ENV_PATH = Path(__file__).resolve().parent.parent / ".env"
 load_dotenv(ENV_PATH)
@@ -62,30 +63,53 @@ def fetch_aperfs(contest_id):
     response.raise_for_status()
     return response.json()
 
+def fetch_history(user):
+    """ユーザーのコンテスト履歴を取得"""
+    url = f"https://atcoder.jp/users/{user}/history/json"
+    response = requests.get(url, headers={"User-Agent": USER_AGENT}, timeout=10)
+    response.raise_for_status()
+    return response.json()
+
+def history_before(history, contest_id):
+    """指定コンテント以降のリ履歴を取り除く"""
+    screen_name = f"{contest_id}.contest.atcoder.jp"
+    for index, entry in enumerate(history):
+        if entry["ContestScreenName"] == screen_name:
+            return history[:index]
+    return history
+
 
 def main():
-    contest_id = sys.argv[1] if len(sys.argv) > 1 else "abc469"
-    names = sys.argv[2:] or ["riru06", "homescapes_fan", "Show_541", "Silver2300", "zabesu210"]
+    contest_id = sys.argv[1] if len(sys.argv) > 1 else "abc470"
+    names = sys.argv[2:] or ["riru06", "homescapes_fan", "Show_541", "Silver2300", "zabesu210", "takuan1", "sho0u"]
 
     standings = fetch_standings(contest_id)
     aperfs = fetch_aperfs(contest_id)
-
     aperf_list = collect_aperfs(standings, aperfs, contest_id)
     resolve = rated_rank_resolver(standings)
     row_of = {row["UserScreenName"]: row for row in standings["StandingsData"]}
 
-    for name in names:
-        row = row_of.get(name)
+    screen_name = f"{contest_id}.contest.atcoder.jp"
+
+    for user in names:
+        row = row_of.get(user)
         if row is None:
-            print(f"{name}: このコンテストに参加していません")
+            print(f"{user}: 不参加")
             continue
 
-        rated_rank = resolve(row["Rank"])
-        raw = apply_cap(predict_performance(rated_rank, aperf_list), contest_id)
+        raw = apply_cap(predict_performance(resolve(row["Rank"]), aperf_list), contest_id)
 
+        history = fetch_history(user)
+        index = next(
+            i for i, e in enumerate(history) if e["ContestScreenName"] == screen_name
+        )
+        actual = history[index]
+        before = history[:index]
+
+        old, new = predict_new_rating(before, raw)
         print(
-            f"{name}: 全体順位={row['Rank']} rated順位={rated_rank} "
-            f"rated={row['IsRated']} 生の値={raw} 表示={display_performanece(raw)}"
+            f"{user}: perf={raw} 予測 {old} -> {new} / 実際 "
+            f"{actual['OldRating']} -> {actual['NewRating']}"
         )
 
 
