@@ -2,6 +2,7 @@
 # 最新回では完全一致するため、実運用では問題にならないと判断して未対応。
 """パフォーマンスの予測"""
 import math
+import bisect
 
 # 初参加者に用いる aperf（検索では ABC=800だったが、実際には1200）
 CENTER_APERF = 1200
@@ -33,40 +34,26 @@ def collect_aperfs(standings, aperfs, contest_id, fallback=None):
         if row["IsRated"]
     ]
 
-def rated_ranks(standings, tie="mid"):
-    """rated 参加者だけで数えなおした順位を ユーザー名 -> 順位 で返す。
+def rated_rank_resolver(standings):
+    """全体順位を渡すと rated 参加者内での順位を表す関数を作る。
 
-       tie は同順位グループの扱い
-         "best"  … グループ先頭の順位を全員に与える（AtCoderの表示と同じ）
-         "worst" … グループ末尾の順位を全員に与える
-         "mid"   … 先頭と末尾の中間
+       同順位グループには、そのグループが占める位置の平均を与える
+       （ac-predictor に合わせている）
     """
-    rated = [row for row in standings["StandingsData"] if row["IsRated"]]
-    rated.sort(key=lambda row: row["Rank"])
+    rated_positons = sorted(
+        row["Rank"] for row in standings["StandingsData"] if row["IsRated"]
+    )
 
-    ranks = {}
-    start = 0
+    def resolve(overall_rank):
+        left = bisect.bisect_left(rated_positons, overall_rank)
+        right = bisect.bisect_right(rated_positons, overall_rank)
+        tied = right - left
 
-    while start < len(rated):
-        end = start
-        while end + 1 < len(rated) and rated[end + 1]["Rank"] == rated[start]["Rank"]:
-            end += 1
+        if tied == 0:
+            return left + 0.5
+        return left + (tied + 1) / 2
 
-        best = start + 1
-        worst = end + 1
-        if tie == "best":
-            value = best
-        elif tie == "worst":
-            value = worst
-        else:
-            value = (best + worst) / 2
-
-        for row in rated[start : end + 1]:
-            ranks[row["UserScreenName"]] = value
-
-        start = end + 1
-
-    return ranks
+    return resolve
 
 def positivize(value):
     """400 未満の値を、AtCoder の表示に合わせて正の範囲に押し込める。"""

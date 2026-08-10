@@ -6,7 +6,13 @@ from pathlib import Path
 
 import requests
 from dotenv import load_dotenv
-from perf import apply_cap, collect_aperfs, expected_rank, display_performanece, predict_performance, rated_ranks
+from perf import (
+    apply_cap,
+    collect_aperfs,
+    display_performanece,
+    predict_performance,
+    rated_rank_resolver,
+)
 
 ENV_PATH = Path(__file__).resolve().parent.parent / ".env"
 load_dotenv(ENV_PATH)
@@ -58,60 +64,29 @@ def fetch_aperfs(contest_id):
 
 
 def main():
-    contest_id = sys.argv[1] if len(sys.argv) > 1 else "abc470"
+    contest_id = sys.argv[1] if len(sys.argv) > 1 else "abc469"
+    names = sys.argv[2:] or ["riru06", "homescapes_fan", "Show_541", "Silver2300", "zabesu210"]
 
     standings = fetch_standings(contest_id)
     aperfs = fetch_aperfs(contest_id)
-    results = fetch_results(contest_id)
 
     aperf_list = collect_aperfs(standings, aperfs, contest_id)
-    ranks = rated_ranks(standings)
-    official = {row["UserScreenName"]: row["Performance"] for row in results}
+    resolve = rated_rank_resolver(standings)
+    row_of = {row["UserScreenName"]: row for row in standings["StandingsData"]}
 
-    rated_rows = [row for row in standings["StandingsData"] if row["IsRated"]]
-    rated_rows.sort(key=lambda row: row["Rank"])
+    for name in names:
+        row = row_of.get(name)
+        if row is None:
+            print(f"{name}: このコンテストに参加していません")
+            continue
 
-    last_rank = rated_rows[-1]["Rank"]
-    tail = [row for row in rated_rows if row["Rank"] == last_rank]
-    # tail_perfs = sorted(
-    #     {official[row["UserScreenName"]] for row in tail if row["UserScreenName"] in official}
-    # )
+        rated_rank = resolve(row["Rank"])
+        raw = apply_cap(predict_performance(rated_rank, aperf_list), contest_id)
 
-    best = len(rated_rows) - len(tail) + 1
-    worst = len(rated_rows)
-    perf = official[tail[0]["UserScreenName"]]
-    implied = expected_rank(perf, aperf_list) + 0.5
-    submitted = sum(1 for row in tail if row["TotalResult"]["Count"] > 0)
-    in_official = sum(1 for row in tail if row["UserScreenName"] in official)
-    tail_name = tail[0]["UserScreenName"]
-    raw = predict_performance(ranks[tail_name], aperf_list)
-
-    print(contest_id)
-    print(f"  rated 総数        : {worst}")
-    print(f"  最下位グループ     : {best} ~ {worst} （{len(tail)}人）")
-    print(f"  うち提出ありの人   : {submitted} 人")
-    print(f"  公式perf          : {perf}")
-    print(f"  逆算した順位       : {implied:.1f}")
-    print(f"  best からの差      : {implied - best:.1f}")
-    print(f"  グループ内の割合   : {(implied - best) / (worst - best):.3f}")
-    print(f"  best + 提出ありの人: {best + submitted}")
-    print(f"  result/json にいる人: {in_official} 人")
-    print(f"最下位グループ 生の値={raw} 表示={display_performanece(apply_cap(raw, contest_id))}")
-
-    # print(f"rated 参加者 {len(rated_rows)} 人")
-    # print(f"最下位グループ Rank={last_rank} 人数={len(tail)}")
-    # print(f"そのグループの公式perf: {tail_perfs[:5]} （全 {len(tail_perfs)} 種類）")
-    # print()
-
-    # step =  max(1, len(rated_rows) // 20)
-    # print("こちらの順位    公式perf    逆算した順位")
-    # for row in rated_rows[::step]:
-    #     name = row["UserScreenName"]
-    #     actual = official.get(name)
-    #     if actual is None:
-    #         continue
-    #     implied = expected_rank(actual, aperf_list) + 0.5
-    #     print(f"{ranks[name]:>12}  {actual:>8}  {implied:>13.1f}")
+        print(
+            f"{name}: 全体順位={row['Rank']} rated順位={rated_rank} "
+            f"rated={row['IsRated']} 生の値={raw} 表示={display_performanece(raw)}"
+        )
 
 
 if __name__ == "__main__":
