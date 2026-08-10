@@ -6,6 +6,7 @@ from pathlib import Path
 
 import requests
 from dotenv import load_dotenv
+from perf import apply_cap, collect_aperfs, predict_performance, rated_ranks
 
 ENV_PATH = Path(__file__).resolve().parent.parent / ".env"
 load_dotenv(ENV_PATH)
@@ -48,35 +49,50 @@ def fetch_standings(contest_id):
     return response.json()
 
 
+def fetch_aperfs(contest_id):
+    """ac-predictorが配信している aperf（過去成績の重み付き平均）を取得"""
+    url = f"https://data.ac-predictor.com/aperfs/{contest_id}.json"
+    response = requests.get(url, headers={"User-Agent": USER_AGENT}, timeout=30)
+    response.raise_for_status()
+    return response.json()
+
+
 def main():
     contest_id = sys.argv[1] if len(sys.argv) > 1 else "abc470"
 
     standings = fetch_standings(contest_id)
+    aperfs = fetch_aperfs(contest_id)
+    results = fetch_results(contest_id)
 
-    print("トップレベルのキー", list(standings.keys()))
-    print("問題", [t["Assignment"] for t in standings["TaskInfo"]])
-    print("行数", len(standings["StandingsData"]))
+    aperf_list = collect_aperfs(standings, aperfs, contest_id)
+    ranks = rated_ranks(standings)
+    official = {row["UserScreenName"]: row["Performance"] for row in results}
 
-    first = standings["StandingsData"][0]
-    print()
-    print("1行目のキー:", list(first.keys()))
-    print("Rank", first["Rank"], "/ User:", first["UserScreenName"])
-    print("TotalResult:", first["TotalResult"])
+    # print(f"rated 参加者: {len(aperf_list)} 人")
+    # print()
 
-    print()
-    print("TaskInfo の1件:", standings["TaskInfo"][0])
+    # for name in ["homescapes_fan", "Show_541", "Silver2300", "zabesu210"]:
+    #     rated_rank = ranks.get(name)
+    #     if rated_rank is None:
+    #         print(f"{name}: rated 参加していません")
+    #         continue
 
-    target = "homescapes_fan"
-    member_row = next(
-        (r for r in standings["StandingsData"] if r["UserScreenName"] == target),
-        None,
-    )
-    if member_row is None:
-        print(f"{target} は参加していません")
-    else:
-        print(f"{target} の TaskResults")
-        for task_key, result in member_row["TaskResults"].items():
-            print(" ", task_key, result)
+    #     predicted = predict_performance(rated_rank, aperf_list)
+    #     print(f"{name}: rated順位={rated_rank} 予測={predicted} 公式={official.get(name)}")
+
+    rated_rows = [row for row in standings["StandingsData"] if row["IsRated"]]
+    rated_rows.sort(key=lambda row: row["Rank"])
+    step =  max(1, len(rated_rows) // 20)
+
+    print("rated順位    予測    公式     差")
+    for row in rated_rows[::step]:
+        name = row["UserScreenName"]
+        actual = official.get(name)
+        if actual is None:
+            continue
+        predicted = apply_cap(predict_performance(ranks[name], aperf_list), contest_id)
+        print(f"{ranks[name]:>8}  {predicted:>6}  {actual:>6}  {actual - predicted:>+6}")
+
 
 if __name__ == "__main__":
     main()
