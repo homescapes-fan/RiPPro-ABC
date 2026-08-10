@@ -14,6 +14,7 @@ from perf import (
 )
 from table import build_rows
 from rating import predict_new_rating
+from render import render
 
 MEMBERS_PATH = Path(__file__).resolve().parent.parent / "members.json"
 
@@ -71,14 +72,18 @@ def main():
         else:
             diff = row["new_rating"] - row["old_rating"]
             change = f"{row['old_rating']} -> {row['new_rating']} ({diff:+d})"
+            cell_texts = [f"{c['score']} {c['time']}".strip() for c in row["cells"]]
 
         print(
             " | ".join(
                 [f"{index}({row["rank"]})", row["user"], score]
-                + row["cells"]
+                + cell_texts
                 + [str(row["perf"]), change]
             )
         )
+
+        output = render(contest_id, tasks, rows)
+        print("画像を保存しました:", output)
 
 
 if __name__ == "__main__":

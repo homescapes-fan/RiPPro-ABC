@@ -5,19 +5,29 @@ def format_elapsed(nanoseconds):
     seconds = nanoseconds // 1_000_000_000
     return f"{seconds // 60}:{seconds % 60:02d}"
 
+
 def format_task_result(result):
-    """1問分の結果を、順位表のセル1つ分の文字列にする・"""
+    """1問分の結果を、順位表のセル1つ分に整える。"""
     if result is None:
-        return ""
+        return {"score": "", "time": "", "solved": False, "tried": False}
 
     score = result["Score"] // 100
     if score > 0:
         penalty = result["Penalty"]
-        head = f"{score}({penalty})" if penalty else str(score)
-        return f"{head} {format_elapsed(result['Elapsed'])}"
+        return {
+            "score": f"{score}({penalty})" if penalty else str(score),
+            "time": format_elapsed(result["Elapsed"]),
+            "solved": True,
+            "tried": True,
+        }
 
-    tries = result["Failure"]
-    return f"({tries})" if tries else ""
+    return {
+        "score": f"({result['Failure']})",
+        "time": "",
+        "solved": False,
+        "tried": True,
+    }
+
 
 def build_rows(standings, members):
     """順位表から、メンバーの行だけを取り出して表示用に整える。"""
