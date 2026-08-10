@@ -17,6 +17,7 @@ def center_aperf(contest_id):
         raise ValueError(f"ABC 以外では未検証です: {contest_id}")
     return CENTER_APERF
 
+
 def apply_cap(performance, contest_id):
     """ABCの perf 上限を適用"""
     if contest_id.startswith("abc"):
@@ -33,6 +34,7 @@ def collect_aperfs(standings, aperfs, contest_id, fallback=None):
         for row in standings["StandingsData"]
         if row["IsRated"]
     ]
+
 
 def rated_rank_resolver(standings):
     """全体順位を渡すと rated 参加者内での順位を表す関数を作る。
@@ -55,21 +57,25 @@ def rated_rank_resolver(standings):
 
     return resolve
 
+
 def positivize(value):
     """400 未満の値を、AtCoder の表示に合わせて正の範囲に押し込める。"""
     if value >= 400.0:
         return value
     return 400.0 / math.exp((400.0 - value) / 400.0)
 
+
 def display_performanece(raw_performance):
     """順位表に対応する perf を返す。"""
     return round(positivize(raw_performance))
+
 
 def expected_rank(strength, aperf_list):
     """実力 strength の人が取るであろう順位（期待値）を返す。"""
     return sum(
         1.0 / (1.0 + 6.0 ** ((strength - aperf) / 400.0)) for aperf in aperf_list
     )
+
 
 def predict_performance(rank, aperf_list):
     """順位 rank を取るのに必要な実力（perf）を二分探索で求める。"""
