@@ -1,6 +1,7 @@
 # 過去回では公式と 1〜10 ほどずれる（aperf ファイルが後から更新されている影響か）。
 # 最新回では完全一致するため、実運用では問題にならないと判断して未対応。
 """パフォーマンスの予測"""
+import math
 
 # 初参加者に用いる aperf（検索では ABC=800だったが、実際には1200）
 CENTER_APERF = 1200
@@ -32,25 +33,50 @@ def collect_aperfs(standings, aperfs, contest_id, fallback=None):
         if row["IsRated"]
     ]
 
-def rated_ranks(standings):
-    """rated 参加者だけで数えなおした順位を ユーザー名 -> 順位 で返す。"""
+def rated_ranks(standings, tie="mid"):
+    """rated 参加者だけで数えなおした順位を ユーザー名 -> 順位 で返す。
+
+       tie は同順位グループの扱い
+         "best"  … グループ先頭の順位を全員に与える（AtCoderの表示と同じ）
+         "worst" … グループ末尾の順位を全員に与える
+         "mid"   … 先頭と末尾の中間
+    """
     rated = [row for row in standings["StandingsData"] if row["IsRated"]]
     rated.sort(key=lambda row: row["Rank"])
 
     ranks = {}
-    previous_rank = None
-    previous_rated_rank = 0
+    start = 0
 
-    for index, row in enumerate(rated, start=1):
-        if row["Rank"] == previous_rank:
-            rated_rank = previous_rated_rank
+    while start < len(rated):
+        end = start
+        while end + 1 < len(rated) and rated[end + 1]["Rank"] == rated[start]["Rank"]:
+            end += 1
+
+        best = start + 1
+        worst = end + 1
+        if tie == "best":
+            value = best
+        elif tie == "worst":
+            value = worst
         else:
-            rated_rank = index
-            previous_rank = row["Rank"]
-            previous_rated_rank = index
-        ranks[row["UserScreenName"]] = rated_rank
+            value = (best + worst) / 2
+
+        for row in rated[start : end + 1]:
+            ranks[row["UserScreenName"]] = value
+
+        start = end + 1
 
     return ranks
+
+def positivize(value):
+    """400 未満の値を、AtCoder の表示に合わせて正の範囲に押し込める。"""
+    if value >= 400.0:
+        return value
+    return 400.0 / math.exp((400.0 - value) / 400.0)
+
+def display_performanece(raw_performance):
+    """順位表に対応する perf を返す。"""
+    return round(positivize(raw_performance))
 
 def expected_rank(strength, aperf_list):
     """実力 strength の人が取るであろう順位（期待値）を返す。"""
