@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 import requests
-from dotenv import load_dotenv
+from dotenv import load_dotenv, set_key
 from perf import (
     apply_cap,
     collect_aperfs,
@@ -53,6 +53,10 @@ def fetch_standings(contest_id):
             f"  本文の先頭    = {response.text[:200]!r}"
         )
 
+    new_session = response.cookies.get("REVEL_SESSION")
+    if new_session and new_session != session:
+        set_key(str(ENV_PATH), "ATCODER_SESSION", new_session)
+
     return response.json()
 
 
@@ -63,12 +67,14 @@ def fetch_aperfs(contest_id):
     response.raise_for_status()
     return response.json()
 
+
 def fetch_history(user):
     """ユーザーのコンテスト履歴を取得"""
     url = f"https://atcoder.jp/users/{user}/history/json"
     response = requests.get(url, headers={"User-Agent": USER_AGENT}, timeout=10)
     response.raise_for_status()
     return response.json()
+
 
 def history_before(history, contest_id):
     """指定コンテント以降のリ履歴を取り除く"""

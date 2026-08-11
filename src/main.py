@@ -3,6 +3,7 @@
 import json
 import sys
 import os
+import traceback
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -20,7 +21,7 @@ from perf import (
 from table import build_rows, build_summary
 from rating import predict_new_rating
 from render import render
-from discord_post import create_thread, post_message
+from discord_post import create_thread, post_message, notify_owner
 
 MEMBERS_PATH = Path(__file__).resolve().parent.parent / "members.json"
 
@@ -111,4 +112,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as error:
+        detail = traceback.format_exc()[-1500:]
+        notify_owner(f"RiPPro-ABC の実行に失敗しました\n```\n{detail}\n```")
+        raise

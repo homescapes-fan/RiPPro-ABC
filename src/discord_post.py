@@ -69,6 +69,32 @@ def post_message(channel_id, content, image_path=None, ping=False):
 
     return response.json()
 
+def open_dm(user_id):
+    """指定ユーザーの DM チャンネルを開き、その ID を返す。"""
+    response = requests.post(
+        f"{API_BASE}/users/@me/channels",
+        headers=_headers(),
+        json={"recipient_id": user_id},
+        timeout=10,
+    )
+
+    if response.status_code >= 400:
+        raise RuntimeError(f"Discord API エラー {response.status_code}: {response.text}")
+
+    return response.json()["id"]
+
+def notify_owner(text):
+    """管理人に DM で知らせる。"""
+    user_id = os.environ.get("OWNER_DISCORD_ID")
+    if not user_id:
+        print("OENER_DISCORD_ID が未設定のため通知できません")
+        return
+
+    try:
+        post_message(open_dm(user_id), text)
+    except Exception as error:
+        print("通知にも失敗しました", error)
+
 
 def main():
     channel_id = os.environ["DISCORD_CHANNEL_ID"]
