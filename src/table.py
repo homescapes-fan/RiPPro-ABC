@@ -19,6 +19,7 @@ def format_task_result(result):
             "time": format_elapsed(result["Elapsed"]),
             "solved": True,
             "tried": True,
+            "elapsed": result["Elapsed"],
         }
 
     return {
@@ -26,7 +27,50 @@ def format_task_result(result):
         "time": "",
         "solved": False,
         "tried": True,
+        "elspsed": None,
     }
+
+
+def format_total(total):
+    """得点欄の表示を決める。"""
+    if total["Count"] == 0:
+        return {"score": "-", "time": ""}
+
+    score = total["Score"] // 100
+    penalty = total["Penalty"]
+
+    if score == 0:
+        return {"score": f"({penalty})", "time": ""}
+
+    return {
+        "score": f"{score}({penalty})" if penalty else str(score),
+        "time": format_elapsed(total["Elapsed"]),
+    }
+
+def build_summary(tasks, rows):
+    """各問題の最速正解者と、正解者数・提出者数を求める。"""
+    summary = []
+
+    for index, name in enumerate(tasks):
+        cells = [row["cells"][index] for row in rows]
+        solved = [
+            (cell["elapsed"], row["user"], cell["time"])
+            for row, cell in zip(rows, cells)
+            if cell["solved"]
+        ]
+
+        fastest = min(solved) if solved else None
+        summary.append(
+            {
+                "task": name,
+                "user": fastest[1] if fastest else None,
+                "time": fastest[2] if fastest else None,
+                "accepted": len(solved),
+                "tried": sum(1 for cell in cells if cell["tried"]),
+            }
+        )
+
+    return summary
 
 
 def build_rows(standings, members):
@@ -50,9 +94,7 @@ def build_rows(standings, members):
                 "rank": raw["Rank"],
                 "user": raw["UserScreenName"],
                 "deleted": raw["UserIsDeleted"],
-                "score": total["Score"] // 100,
-                "penalty": total["Penalty"],
-                "elapsed": format_elapsed(total["Elapsed"]),
+                "total": format_total(total),
                 "cells": [
                     format_task_result(raw["TaskResults"].get(task_key_of[name]))
                     for name in tasks

@@ -12,7 +12,7 @@ from perf import (
     predict_performance,
     rated_rank_resolver,
 )
-from table import build_rows
+from table import build_rows, build_summary
 from rating import predict_new_rating
 from render import render
 
@@ -63,10 +63,6 @@ def main():
     print(" | ".join(["順位", "ユーザ", "得点"] + tasks + ["perf", "レート変化"]))
 
     for index, row in enumerate(rows, start=1):
-        score = (
-            f"{row['score']}({row['penalty']})" if row["penalty"] else str(row["score"])
-        )
-
         if row["new_rating"] is None:
             change = f"{row['old_rating']} (unrated)"
         else:
@@ -76,13 +72,14 @@ def main():
 
         print(
             " | ".join(
-                [f"{index}({row["rank"]})", row["user"], score]
+                [f"{index}({row['rank']})", row["user"], row["total"]["score"]]
                 + cell_texts
                 + [str(row["perf"]), change]
             )
         )
 
-        output = render(contest_id, tasks, rows)
+        summary = build_summary(tasks, rows)
+        output = render(contest_id, tasks, rows, summary)
         print("画像を保存しました:", output)
 
 

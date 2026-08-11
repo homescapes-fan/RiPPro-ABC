@@ -36,6 +36,7 @@ th { background: #f5f5f5; }
 .down { color: #dd0000; }
 .flat { color: #888888; }
 .muted { color: #888888; }
+.summary td { background: #fafafa; }
 """
 
 def rating_color(value):
@@ -78,17 +79,36 @@ def rating_cell(row):
         f'<span class="sign">({diff:+d})</span>'
     )
 
+def summary_rows(summary):
+    """最速正解者と正解者数の行を返す。"""
+    fastest = ""
+    counts = ""
 
-def build_html(tasks, rows):
+    for item in summary:
+        if item["user"] is None:
+            fastest += '<td class="empty">-</td>'
+        else:
+            fastest += (
+                f'<td><div class="time">{html.escape(item["user"])}</div>'
+                f'<div class="time">{item["time"]}</div></td>'
+            )
+        counts += f'<td class="time">{item["accepted"]}/{item["tried"]}</td>'
+
+    empty = '<td class="empty">-</td><td class="empty">-</td>'
+    return (
+        f'<tr class="summary"><td colspan="3">最速正解者</td>{fastest}{empty}</tr>'
+        f'<tr class="summary"><td colspan="3">正解者数/提出者数</td>{counts}{empty}</tr>'
+    )
+
+
+
+def build_html(tasks, rows, summary):
     """順位表の HTML を組み立てる。"""
     headers = ["順位", "ユーザ", "得点"] + tasks + ["perf", "レート変化"]
     head = "".join(f"<th>{name}</th>" for name in headers)
 
     body = ""
     for index, row in enumerate(rows, start=1):
-        score = (
-            f'{row["score"]}({row["penalty"]})' if row["penalty"] else str(row["score"])
-        )
         color = rating_color(row["old_rating"])
 
         body += (
@@ -96,8 +116,8 @@ def build_html(tasks, rows):
             f'<td><div class="value">{index}</div>'
             f'<div class="time">({row["rank"]})</div></td>'
             f'<td class="user" style="color:{color}">{html.escape(row["user"])}</td>'
-            f'<td><div class="value">{score}</div>'
-            f'<div class="time">{row["elapsed"]}</div></td>'
+            f'<td><div class="value">{row["total"]["score"]}</div>'
+            f'<div class="time">{row["total"]["time"]}</div></td>'
             + "".join(task_cell(cell) for cell in row["cells"])
             + f'<td class="value" style="color:{rating_color(row["perf"])}">'
             f'{row["perf"]}</td>'
@@ -105,15 +125,18 @@ def build_html(tasks, rows):
             "</tr>"
         )
 
-    return f"<style>{STYLE}</style><table><tr>{head}</tr>{body}</table>"
+    return (
+        f"<style>{STYLE}</style><table><tr>{head}</tr>"
+        f"{body}{summary_rows(summary)}</table>"
+        )
 
 
-def render(contest_id, tasks, rows):
+def render(contest_id, tasks, rows, summary):
     """順位表の画像を作り、保存先のパスを返す。"""
     OUT_DIR.mkdir(exist_ok=True)
     output = OUT_DIR / f"{contest_id}.png"
 
-    document = build_html(tasks, rows)
+    document = build_html(tasks, rows, summary)
     (OUT_DIR / "preview.html").write_text(document, encoding="utf-8")
 
     with sync_playwright() as playwright:
