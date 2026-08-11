@@ -2,7 +2,12 @@
 
 import json
 import sys
+import os
 from pathlib import Path
+
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 from atcoder import fetch_aperfs, fetch_history, fetch_standings, history_before
 from perf import (
@@ -15,6 +20,7 @@ from perf import (
 from table import build_rows, build_summary
 from rating import predict_new_rating
 from render import render
+from discord_post import post_message
 
 MEMBERS_PATH = Path(__file__).resolve().parent.parent / "members.json"
 
@@ -49,10 +55,22 @@ def attach_performance(rows, standings, aperfs, contest_id):
     attach_rating(rows, contest_id)
 
 
+def build_mentions(rows):
+    """参加者へのメンション文字列を作る。"""
+    names = []
+    for row in rows:
+        discord_id = row["member"].get("discord_id")
+        names.append(f"<@{discord_id}>" if discord_id else row["user"])
+    return " ".join(names)
+
+
 def main():
+    args = [value for value in sys.argv[1:] if not value.startswith("--")]
     contest_id = sys.argv[1] if len(sys.argv) > 1 else "abc470"
+    should_post = "--post" in sys.argv
 
     members = load_members()
+    print(members[0])
     standings = fetch_standings(contest_id)
     aperfs = fetch_aperfs(contest_id)
 
@@ -79,9 +97,17 @@ def main():
             )
         )
 
-        summary = build_summary(tasks, rows)
-        output = render(contest_id, tasks, rows, summary)
-        print("画像を保存しました:", output)
+    summary = build_summary(tasks, rows)
+    output = render(contest_id, tasks, rows, summary)
+    print("画像を保存しました:", output)
+
+    if should_post:
+        message = f"{build_mentions(rows)}\nお疲れ様でした！"
+        posted = post_message(
+            os.environ["DISCORD_CHANNEL_ID"], message, image_path=output, ping=True
+        )
+        print("投稿しました。メッセージID:", posted["id"])
+
 
 
 if __name__ == "__main__":
