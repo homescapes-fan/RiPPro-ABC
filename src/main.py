@@ -20,7 +20,7 @@ from perf import (
 from table import build_rows, build_summary
 from rating import predict_new_rating
 from render import render
-from discord_post import post_message
+from discord_post import create_thread, post_message
 
 MEMBERS_PATH = Path(__file__).resolve().parent.parent / "members.json"
 
@@ -70,7 +70,6 @@ def main():
     should_post = "--post" in sys.argv
 
     members = load_members()
-    print(members[0])
     standings = fetch_standings(contest_id)
     aperfs = fetch_aperfs(contest_id)
 
@@ -103,10 +102,11 @@ def main():
 
     if should_post:
         message = f"{build_mentions(rows)}\nお疲れ様でした！"
-        posted = post_message(
-            os.environ["DISCORD_CHANNEL_ID"], message, image_path=output, ping=True
-        )
-        print("投稿しました。メッセージID:", posted["id"])
+        channel_id = os.environ["DISCORD_CHANNEL_ID"]
+
+        thread_id = create_thread(channel_id, contest_id.removeprefix("abc"))
+        posted = post_message(thread_id, message, image_path=output, ping=True)
+        print("スレッドID:", thread_id, "。メッセージID:", posted["id"])
 
 
 

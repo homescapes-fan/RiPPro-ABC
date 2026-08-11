@@ -23,6 +23,27 @@ def _headers():
         "User-Agent": USER_AGENT,
     }
 
+
+def create_thread(channel_id, name):
+    """チャンネルに公開スレッドを作り、そのスレッドの ID を返す。"""
+    payload = {
+        "name": name,
+        "type": 11,
+        "auto_archive_duration": 10080,
+    }
+    response = requests.post(
+        f"{API_BASE}/channels/{channel_id}/threads",
+        headers=_headers(),
+        json=payload,
+        timeout=10,
+    )
+
+    if response.status_code >= 400:
+        raise RuntimeError(f"Discord API エラー {response.status_code}: {response.text}")
+
+    return response.json()["id"]
+
+
 def post_message(channel_id, content, image_path=None, ping=False):
     """指定チャンネルに投稿する。image_path を渡すと画像を添付する。"""
     payload = {
