@@ -100,6 +100,8 @@ def build_rows(standings, members):
                     for name in tasks
                 ],
                 "is_rated": raw["IsRated"],
+                "country": raw["Country"],
+                "atcoder_rank": raw["AtCoderRank"],
             }
         )
 

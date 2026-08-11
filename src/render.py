@@ -8,16 +8,24 @@ from playwright.sync_api import sync_playwright
 OUT_DIR = Path(__file__).resolve().parent.parent / "out"
 
 # AtCoder のレート帯の色（上限, 色）
-RATING_COLORS = [
-    (400, "#808080"),
-    (800, "#804000"),
-    (1200, "#008000"),
-    (1600, "#00c0c0"),
-    (2000, "#0000ff"),
-    (2400, "#c0c000"),
-    (2800, "#ff8000"),
+RATING_BANDS = [
+    (400, "gray", "#808080"),
+    (800, "brown", "#804000"),
+    (1200, "green", "#008000"),
+    (1600, "cyan", "#00c0c0"),
+    (2000, "blue", "#0000ff"),
+    (2400, "yellow", "#c0c000"),
+    (2800, "orange", "#ff8000"),
 ]
-TOP_COLOR = "#ff0000"
+
+TOP_BAND =("red", "#ff0000")
+
+CROWNS = [
+    (1, "crown_champion"),
+    (10, "crown_gold"),
+    (30, "crown_silver"),
+    (100, "crown_bronze"),
+]
 
 STYLE = """
 body { margin: 0; background: #ffffff; }
@@ -37,14 +45,43 @@ th { background: #f5f5f5; }
 .flat { color: #888888; }
 .muted { color: #888888; }
 .summary td { background: #fafafa; }
+.user img { height: 14px; vertical-align: -2px; margin-right: 4px; }
+.user .flag { height: 12px; margin-right: 3px; }
 """
+
+def flag_url(country):
+    """国旗画像の URL を探す。国が未設定なら None """
+    if not country:
+        return None
+    return f"https://img.atcoder.jp/assets/flag/{country}.png"
+
+
+def rating_band(value):
+    """レート帯の（名前，色）を返す。"""
+    for upper, name, color in RATING_BANDS:
+        if value < upper:
+            return name, color
+    return TOP_BAND
+
 
 def rating_color(value):
     """レート帯に対応する色を返す。"""
-    for upper, color in RATING_COLORS:
-        if value < upper:
-            return color
-    return TOP_COLOR
+    return rating_band(value)[1]
+
+
+def user_icon_url(rating, atcoder_rank):
+    """ユーザー名の左の瓦または王冠のURLを返す。無い場合はNone"""
+    if atcoder_rank:
+        for limit, name in CROWNS:
+            if atcoder_rank <= limit:
+                return f"https://img.atcoder.jp/assets/icon/{name}.png"
+
+    if rating >= 2800:
+        return None
+
+    band, _ = rating_band(rating)
+    level = (rating % 400) // 100 + 1
+    return f"https://img.atcoder.jp/assets/user/user-{band}-{level}.png"
 
 
 def task_cell(cell):
@@ -79,6 +116,7 @@ def rating_cell(row):
         f'<span class="sign">({diff:+d})</span>'
     )
 
+
 def summary_rows(summary):
     """最速正解者と正解者数の行を返す。"""
     fastest = ""
@@ -101,7 +139,6 @@ def summary_rows(summary):
     )
 
 
-
 def build_html(tasks, rows, summary):
     """順位表の HTML を組み立てる。"""
     headers = ["順位", "ユーザ", "得点"] + tasks + ["perf", "レート変化"]
@@ -110,12 +147,21 @@ def build_html(tasks, rows, summary):
     body = ""
     for index, row in enumerate(rows, start=1):
         color = rating_color(row["old_rating"])
+        images = ""
+        flag = flag_url(row["country"])
+        if flag:
+            images += f'<img class="flag" src="{flag}">'
+
+        icon = user_icon_url(row["old_rating"], row["atcoder_rank"])
+        if icon:
+            images += f'<img src="{icon}">'
 
         body += (
             "<tr>"
             f'<td><div class="value">{index}</div>'
             f'<div class="time">({row["rank"]})</div></td>'
-            f'<td class="user" style="color:{color}">{html.escape(row["user"])}</td>'
+            f'<td class="user" style="color:{color}">{images}'
+            f'{html.escape(row["user"])}</td>'
             f'<td><div class="value">{row["total"]["score"]}</div>'
             f'<div class="time">{row["total"]["time"]}</div></td>'
             + "".join(task_cell(cell) for cell in row["cells"])
@@ -142,7 +188,7 @@ def render(contest_id, tasks, rows, summary):
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch()
         page = browser.new_page(device_scale_factor=2)
-        page.set_content(document)
+        page.set_content(document, wait_until="networkidle")
         page.locator("table").screenshot(path=str(output))
         browser.close()
 

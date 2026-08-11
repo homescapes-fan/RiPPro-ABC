@@ -70,6 +70,7 @@ def main():
             change = f"{row['old_rating']} -> {row['new_rating']} ({diff:+d})"
             cell_texts = [f"{c['score']} {c['time']}".strip() for c in row["cells"]]
 
+        print(row["user"], "AtCoderRank =", row["atcoder_rank"])
         print(
             " | ".join(
                 [f"{index}({row['rank']})", row["user"], row["total"]["score"]]
