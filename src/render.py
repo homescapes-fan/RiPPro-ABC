@@ -161,7 +161,7 @@ def fit_font_size(text, width=52.0, base=10.0):
     return round(width / (len(text) * 0.6), 2)
 
 
-def summary_rows(summary):
+def summary_rows(summary, with_rating):
     """最速正解者と正解者数の行を返す。"""
     fastest = ""
     counts = ""
@@ -186,7 +186,7 @@ def summary_rows(summary):
             "</div></td>"
         )
 
-    empty = '<td class="empty">-</td><td class="empty">-</td>'
+    empty = '<td class="empty">-</td><td class="empty">-</td>' if with_rating else ""
     return (
         f'<tr class="summary fastest-row"><td colspan="3">最速正解者</td>{fastest}{empty}</tr>'
         f'<tr class="summary counts-row"><td colspan="3">'
@@ -205,7 +205,7 @@ def font_face(filename, weight):
     )
 
 
-def build_html(tasks, rows, summary):
+def build_html(tasks, rows, summary, with_rating):
     """順位表の HTML を組み立てる。"""
     head = (
         '<th style="width:49px">順位</th>'
@@ -214,9 +214,12 @@ def build_html(tasks, rows, summary):
         + "".join(
             f'<th class="task" style="width:60px">{name}</th>' for name in tasks
         )
-        + '<th style="width:84px">perf</th>'
-        + '<th style="width:168px">レート変化</th>'
     )
+    if with_rating:
+        head += (
+            '<th style="width:84px">perf</th>'
+            '<th style="width:168px">レート変化</th>'
+        )
 
     body = ""
     for index, row in enumerate(rows, start=1):
@@ -224,11 +227,10 @@ def build_html(tasks, rows, summary):
 
         images = ""
         flag = flag_url(row["country"])
-
         if flag:
-            images += f'<img alt="" class="flag" src="{flag}">'
-            icon = user_icon_url(row["old_rating"], row["atcoder_rank"], row["rated_count"])
+            images += f'<img class="flag" alt="" src="{flag}">'
 
+        icon = user_icon_url(row["old_rating"], row["atcoder_rank"], row["rated_count"])
         if icon:
             images += f'<img alt="" src="{icon}">'
 
@@ -244,7 +246,7 @@ def build_html(tasks, rows, summary):
         else:
             total_html = '<span class="empty">-</span>'
 
-        body += (
+        cells = (
             "<tr>"
             f'<td><div class="rank">{index}</div>'
             f'<div class="rank-all">({row["rank"]})</div></td>'
@@ -252,27 +254,32 @@ def build_html(tasks, rows, summary):
             f'{html.escape(row["user"])}</td>'
             f"<td>{total_html}</td>"
             + "".join(task_cell(cell) for cell in row["cells"])
-            + f'<td class="perf" style="color:{rating_color(row["perf"])}">'
-            f'{row["perf"]}</td>'
-            f"<td>{rating_cell(row)}</td>"
-            "</tr>"
         )
+
+        if with_rating:
+            cells += (
+                f'<td class="perf" style="color:{rating_color(row["perf"])}">'
+                f'{row["perf"]}</td>'
+                f"<td>{rating_cell(row)}</td>"
+            )
+
+        body += cells + "</tr>"
 
     fonts = font_face("Lato-Regular.ttf", 400) + font_face("Lato-Bold.ttf", 700)
 
     return (
         f"<style>{fonts}{STYLE}</style><table>"
         f"<thead><tr>{head}</tr></thead>"
-        f"<tbody>{body}{summary_rows(summary)}</tbody></table>"
+        f"<tbody>{body}{summary_rows(summary, with_rating)}</tbody></table>"
     )
 
 
-def render(contest_id, tasks, rows, summary):
+def render(contest_id, tasks, rows, summary, with_rating):
     """順位表の画像を作り、保存先のパスを返す。"""
     OUT_DIR.mkdir(exist_ok=True)
     output = OUT_DIR / f"{contest_id}.png"
 
-    document = build_html(tasks, rows, summary)
+    document = build_html(tasks, rows, summary, with_rating)
     (OUT_DIR / "preview.html").write_text(document, encoding="utf-8")
 
     with sync_playwright() as playwright:

@@ -68,18 +68,26 @@ def next_contest_id(state):
     return f"abc{number}"
 
 
-def attach_rating(rows, contest_id):
-    """各行にレート変化を追加する。"""
+def attach_rating(rows, contest_id, with_perf):
+    """各行にレート情報を追加する。
+
+    with_perf が偽のときは、履歴から取れる old_rating と rated_count だけを入れる。
+    """
     for index, row in enumerate(rows):
         if index > 0:
             time.sleep(REQUEST_INTERVAL)
 
         history = history_before(fetch_history(row["user"]), contest_id)
-        old, new = predict_new_rating(history, row["raw_perf"])
+        rated = [entry for entry in history if entry["IsRated"]]
 
-        row["rated_count"] = sum(1 for entry in history if entry["IsRated"])
-        row["old_rating"] = old
-        row["new_rating"] = new if row["is_rated"] else None
+        row["rated_count"] = len(rated)
+        row["old_rating"] = rated[-1]["NewRating"] if rated else 0
+
+        if with_perf:
+            _, new = predict_new_rating(history, row["raw_perf"])
+            row["new_rating"] = new if row["is_rated"] else None
+        else:
+            row["new_rating"] = None
 
 
 def attach_performance(rows, standings, aperfs, contest_id):
@@ -92,8 +100,6 @@ def attach_performance(rows, standings, aperfs, contest_id):
         raw = apply_cap(predict_performance(rated_rank, aperf_list), contest_id)
         row["raw_perf"] = raw
         row["perf"] = display_performanece(raw)
-
-    attach_rating(rows, contest_id)
 
 
 def build_mentions(rows):
@@ -131,52 +137,58 @@ def main():
 
     members = load_members()
     aperfs = fetch_aperfs(contest_id)
+    with_rating = aperfs is not None
+    if not with_rating:
+        print("aperf が配信されていないため、perf とレート変化は表示しません")
 
     tasks, rows = build_rows(standings, members)
-    attach_performance(rows, standings, aperfs, contest_id)
-    attach_rating(rows, contest_id)
+    if with_rating:
+        attach_performance(rows, standings, aperfs, contest_id)
+    attach_rating(rows, contest_id, with_rating)
     summary = build_summary(tasks, rows)
 
+    headers = ["順位", "ユーザ", "得点"] + tasks
+    if with_rating:
+        headers += ["perf", "レート変化"]
+
     print(f"{contest_id}: 登録 {len(members)} 人中 {len(rows)} 人が参加")
-    print(" | ".join(["順位", "ユーザ", "得点"] + tasks + ["perf", "レート変化"]))
+    print(" | ".join(headers))
 
     for index, row in enumerate(rows, start=1):
         cell_texts = [
             f"{c['score']}{c['penalty']} {c['time']}".strip() for c in row["cells"]
         ]
+        parts = [
+            f"{index}({row['rank']})",
+            row["user"],
+            f"{row['total']['score']}{row['total']['penalty']}" or "-",
+        ] + cell_texts
 
-        if row["new_rating"] is None:
-            change = f"{row['old_rating']} (unrated)"
-        else:
-            diff = row["new_rating"] - row["old_rating"]
-            change = f"{row['old_rating']} -> {row['new_rating']} ({diff:+d})"
+        if with_rating:
+            if row["new_rating"] is None:
+                change = f"{row['old_rating']} (unrated)"
+            else:
+                diff = row["new_rating"] - row["old_rating"]
+                change = f"{row['old_rating']} -> {row['new_rating']} ({diff:+d})"
+            parts += [str(row["perf"]), change]
 
-        print(
-            " | ".join(
-                [
-                    f"{index}({row['rank']})",
-                    row["user"],
-                    f"{row['total']['score']}{row['total']['penalty']}" or "-",
-                ]
-                + cell_texts
-                + [str(row["perf"]), change]
-            )
-        )
+        print(" | ".join(parts))
 
-    output = render(contest_id, tasks, rows, summary)
+    output = render(contest_id, tasks, rows, summary, with_rating)
     print("画像を保存しました:", output)
 
     if should_post:
         message = f"{build_mentions(rows)}\nお疲れ様でした！"
-        channel_id = os.environ["DISCORD_CHANNEL_ID"]
+        if not with_rating:
+            message += (
+                "（ac-predictor が壊れている影響により、"
+                "パフォーマンス及び新レーティングは表示できません）"
+            )
 
+        channel_id = os.environ["DISCORD_CHANNEL_ID"]
         thread_id = create_thread(channel_id, contest_id.removeprefix("abc"))
         posted = post_message(thread_id, message, image_path=output, ping=True)
-        print("スレッドID:", thread_id, "。メッセージID:", posted["id"])
-
-    if auto and should_post:
-        state["last_contest"] = contest_id
-        save_state(state)
+        print("スレッドID:", thread_id, "/ メッセージID:", posted["id"])
 
 
 

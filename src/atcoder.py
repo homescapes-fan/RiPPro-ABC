@@ -81,9 +81,13 @@ def fetch_standings(contest_id):
 
 
 def fetch_aperfs(contest_id):
-    """ac-predictorが配信している aperf（過去成績の重み付き平均）を取得"""
+    """ac-predictorが配信している aperf（過去成績の重み付き平均）を取得。無ければ None"""
     url = f"https://data.ac-predictor.com/aperfs/{contest_id}.json"
     response = _get(url, headers={"User-Agent": USER_AGENT}, timeout=30)
+
+    if response.status_code == 404:
+        return None
+
     response.raise_for_status()
     return response.json()
 
