@@ -4,6 +4,7 @@ import json
 import sys
 import os
 import traceback
+import time
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -32,6 +33,10 @@ from discord_post import create_thread, post_message, notify_owner
 
 MEMBERS_PATH = Path(__file__).resolve().parent.parent / "members.json"
 STATE_PATH = Path(__file__).resolve().parent.parent / "state.json"
+
+# AtCoder への連続アクセスを避けるための待ち時間（秒）。
+# 参加者の人数だけ history/json を叩くため、間隔を空けないと 429 を返される。
+REQUEST_INTERVAL = 0.5
 
 
 def load_members():
@@ -64,8 +69,11 @@ def next_contest_id(state):
 
 
 def attach_rating(rows, contest_id):
-    """各行にレート変化を追加する"""
-    for row in rows:
+    """各行にレート変化を追加する。"""
+    for index, row in enumerate(rows):
+        if index > 0:
+            time.sleep(REQUEST_INTERVAL)
+
         history = history_before(fetch_history(row["user"]), contest_id)
         old, new = predict_new_rating(history, row["raw_perf"])
 
