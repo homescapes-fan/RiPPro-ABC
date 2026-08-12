@@ -2,6 +2,7 @@
 
 import os
 import sys
+import time
 from pathlib import Path
 
 import requests
@@ -24,11 +25,25 @@ USER_AGENT = "RiPPro-ABC-Bot(https://github.com/homescapes-fan/RiPPro-ABC)"
 # Tester や解説放送の担当者が開始前に提出することがあるため敢えてこの値にしている。
 MIN_SUBMISSIONS = 1000
 
+# 429（レート制限）を返されたときに待つ秒数。
+RETRY_WAIT = 10.2
+
+
+def _get(url, **kwargs):
+    """GET する。429 が返ったら少し待って1回だけやり直す。"""
+    response = requests.get(url, **kwargs)
+
+    if response.status_code == 429:
+        time.sleep(RETRY_WAIT)
+        response = requests.get(url, **kwargs)
+
+    return response
+
 
 def fetch_results(contest_id):
     """指定したコンテストの全参加者の結果を取得し、リストで返す"""
     url = f"https://atcoder.jp/contests/{contest_id}/results/json"
-    response = requests.get(url, headers={"User-Agent": USER_AGENT}, timeout=10)
+    response = _get(url, headers={"User-Agent": USER_AGENT}, timeout=10)
     response.raise_for_status()
     return response.json()
 
@@ -40,10 +55,10 @@ def fetch_standings(contest_id):
         raise RuntimeError(".env の ATCODER_SESSION が読み込めていません。")
     
     url = f"https://atcoder.jp/contests/{contest_id}/standings/json"
-    response = requests.get(
+    response = _get(
         url,
         headers={"User-Agent": USER_AGENT},
-        cookies={"REVEL_SESSION": os.environ["ATCODER_SESSION"]},
+        cookies={"REVEL_SESSION": session},
         timeout=30,
     )
     response.raise_for_status()
@@ -68,7 +83,7 @@ def fetch_standings(contest_id):
 def fetch_aperfs(contest_id):
     """ac-predictorが配信している aperf（過去成績の重み付き平均）を取得"""
     url = f"https://data.ac-predictor.com/aperfs/{contest_id}.json"
-    response = requests.get(url, headers={"User-Agent": USER_AGENT}, timeout=30)
+    response = _get(url, headers={"User-Agent": USER_AGENT}, timeout=30)
     response.raise_for_status()
     return response.json()
 
@@ -76,7 +91,7 @@ def fetch_aperfs(contest_id):
 def fetch_history(user):
     """ユーザーのコンテスト履歴を取得"""
     url = f"https://atcoder.jp/users/{user}/history/json"
-    response = requests.get(url, headers={"User-Agent": USER_AGENT}, timeout=10)
+    response = _get(url, headers={"User-Agent": USER_AGENT}, timeout=10)
     response.raise_for_status()
     return response.json()
 
