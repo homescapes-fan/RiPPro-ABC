@@ -1,11 +1,14 @@
 """順位表を画像にする。"""
 
 import html
+import base64
 from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
 OUT_DIR = Path(__file__).resolve().parent.parent / "out"
+
+ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
 
 # AtCoder のレート帯の色（上限, 色）
 RATING_BANDS = [
@@ -172,6 +175,16 @@ def summary_rows(summary):
     )
 
 
+def font_face(filename, weight):
+    """assets のフォントを base64 で埋め込んだ @font-face を返す。"""
+    data = base64.b64encode((ASSETS_DIR / filename).read_bytes()).decode("ascii")
+    source = f"url(data:font/ttf;base64,{data}) format('truetype')"
+    return (
+        "@font-face { font-family: 'Lato'; font-style: normal; "
+        "font-weight: " + str(weight) + "; src: " + source + "; }"
+    )
+
+
 def build_html(tasks, rows, summary):
     """順位表の HTML を組み立てる。"""
     head = (
@@ -221,11 +234,13 @@ def build_html(tasks, rows, summary):
             "</tr>"
         )
 
+    fonts = font_face("Lato-Regular.ttf", 400) + font_face("Lato-Bold.ttf", 700)
+
     return (
-        f"<style>{STYLE}</style><table>"
+        f"<style>{fonts}{STYLE}</style><table>"
         f"<thead><tr>{head}</tr></thead>"
         f"<tbody>{body}{summary_rows(summary)}</tbody></table>"
-        )
+    )
 
 
 def render(contest_id, tasks, rows, summary):
