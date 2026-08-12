@@ -39,10 +39,10 @@ table { border-collapse: collapse; background: #ffffff;
         font-size: 14px; color: #333333; }
 th, td { border: 1px solid #dddddd; text-align: center;
          white-space: nowrap; vertical-align: middle; line-height: 20px; }
-th { padding: 8px 10px 8px 8px; }
-td { padding: 4px 6; }
+th { padding: 0px 10px 0px 8px; }
+td { padding: 0px 6px; }
 tbody tr:nth-child(odd) { background: #f9f9f9; }
-.user { text-align: left; padding: 8px 8px 8px 12px; font-weight: bold; }
+.user { text-align: left; padding: 0px 8px 0px 12px; font-weight: bold; }
 .user img { height: 14px; vertical-align: -2px; margin-right: 4px; }
 .user .flag { height: 12px; margin-right: 3px; }
 .rank { font-weight: 700; }
@@ -55,9 +55,14 @@ tbody tr:nth-child(odd) { background: #f9f9f9; }
 .rating { font-size: 14px; font-weight: 700; }
 .diff { font-size: 14px; font-weight: 400; color: #aaaaaa; }
 .summary .count, .summary .count .ac, .summary .count .time { font-size: 10px; }
-.summary td { padding: 4px; font-size: 11.2px; color: #888888; background: #ffffff; }
+.summary td { padding: 0 4px; font-size: 11.2px; color: #888888; background: #ffffff; }
 .summary .ac, .summary .time, .summary .empty { font-size: 11.2px; }
 .summary .fastest { font-weight: 700; font-size: 10px; line-height: 16px; }
+.task { color: #337ab7; font-size: 14px; }
+thead tr { height: 36.33px; }
+tbody tr { height: 46.5px; }
+tbody tr.fastest-row { height: 44.38px; }
+tbody tr.counts-row { height: 27.38px; }
 """
 
 def flag_url(country):
@@ -170,8 +175,8 @@ def summary_rows(summary):
 
     empty = '<td class="empty">-</td><td class="empty">-</td>'
     return (
-        f'<tr class="summary"><td colspan="3">最速正解者</td>{fastest}{empty}</tr>'
-        f'<tr class="summary"><td colspan="3">'
+        f'<tr class="summary fastest-row"><td colspan="3">最速正解者</td>{fastest}{empty}</tr>'
+        f'<tr class="summary counts-row"><td colspan="3">'
         '<span class="ac">正解者数</span> / <span class="time">提出者数</span>'
         f"</td>{counts}{empty}</tr>"
     )
@@ -193,7 +198,9 @@ def build_html(tasks, rows, summary):
         '<th style="width:49px">順位</th>'
         '<th style="width:303px">ユーザ</th>'
         '<th style="width:60px">得点</th>'
-        + "".join(f'<th style="width:60px">{name}</th>' for name in tasks)
+        + "".join(
+            f'<th class="task" style="width:60px">{name}</th>' for name in tasks
+        )
         + '<th style="width:84px">perf</th>'
         + '<th style="width:168px">レート変化</th>'
     )
