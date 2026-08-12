@@ -51,10 +51,10 @@ tbody tr:nth-child(odd) { background: #f9f9f9; }
 .wa { color: #ff0000; font-weight: 400; font-size: 12.6px; }
 .time { color: #888888; font-weight: 400; font-size: 12.6px; }
 .empty { color: #888888; font-size: 12.6px; }
-.up { color: #00aa3e; }
-.down { color: #ff0000; }
-.flat { color: #888888; }
-.muted { color: #888888; }
+.perf { font-size: 14px; font-weight: 700; }
+.rating { font-size: 14px; font-weight: 700; }
+.diff { font-size: 14px; font-weight: 400; color: #aaaaaa; }
+.summary .count, .summary .count .ac, .summary .count .time { font-size: 10px; }
 .summary td { padding: 4px; font-size: 11.2px; color: #888888; background: #ffffff; }
 .summary .ac, .summary .time, .summary .empty { font-size: 11.2px; }
 .summary .fastest { font-weight: 700; font-size: 10px; line-height: 16px; }
@@ -117,17 +117,17 @@ def rating_cell(row):
 
     if row["new_rating"] is None:
         return (
-            f'<span style="color:{rating_color(old)}">{old}</span>'
-            '<span class="muted">(unrated)</span>'
+            f'<span class="rating" style="color:{rating_color(old)}">{old}</span>'
+            ' <span class="diff">(unrated)</span>'
         )
 
     new = row["new_rating"]
     diff = new - old
-    sign = "up" if diff > 0 else "down" if diff < 0 else "flat"
+
     return (
-        f'<span style="color:{rating_color(old)}">{old}</span>'
-        f' →<span style="color:{rating_color(new)}">{new}</span>'
-        f'<span class="sign">({diff:+d})</span>'
+        f'<span class="rating" style="color:{rating_color(old)}">{old}</span>'
+        f' → <span class="rating" style="color:{rating_color(new)}">{new}</span>'
+        f' <span class="diff">({diff:+d})</span>'
     )
 
 
@@ -162,8 +162,10 @@ def summary_rows(summary):
             )
 
         counts += (
-            f'<td><span class="ac">{item["accepted"]}</span>'
-            f' / <span class="time">{item["tried"]}</span></td>'
+            f'<td><div class="count">'
+            f'<span class="ac">{item["accepted"]}</span>'
+            f' / <span class="time">{item["tried"]}</span>'
+            "</div></td>"
         )
 
     empty = '<td class="empty">-</td><td class="empty">-</td>'
@@ -228,7 +230,7 @@ def build_html(tasks, rows, summary):
             f'{html.escape(row["user"])}</td>'
             f"<td>{total_html}</td>"
             + "".join(task_cell(cell) for cell in row["cells"])
-            + f'<td class="score" style="color:{rating_color(row["perf"])}">'
+            + f'<td class="perf" style="color:{rating_color(row["perf"])}">'
             f'{row["perf"]}</td>'
             f"<td>{rating_cell(row)}</td>"
             "</tr>"
