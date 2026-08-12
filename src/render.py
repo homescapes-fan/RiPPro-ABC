@@ -28,14 +28,16 @@ CROWNS = [
 ]
 
 STYLE = """
+* { box-sizing: border-box; }
 body { margin: 0; background: #ffffff; }
 table { border-collapse: collapse; background: #ffffff;
+        table-layout: fixed;
         font-family: Lato, "Helvetica Neue", arial, "Noto Sans JP", sans-serif;
         font-size: 14px; color: #333333; }
 th, td { border: 1px solid #dddddd; text-align: center;
          white-space: nowrap; vertical-align: middle; line-height: 20px; }
 th { padding: 8px 10px 8px 8px; }
-td { padding: 4px 8px; }
+td { padding: 4px 6; }
 tbody tr:nth-child(odd) { background: #f9f9f9; }
 .user { text-align: left; padding: 8px 8px 8px 12px; font-weight: bold; }
 .user img { height: 14px; vertical-align: -2px; margin-right: 4px; }
@@ -50,7 +52,9 @@ tbody tr:nth-child(odd) { background: #f9f9f9; }
 .down { color: #ff0000; }
 .flat { color: #888888; }
 .muted { color: #888888; }
-.summary td { background: #ffffff; }
+.summary td { padding: 4px; font-size: 11.2px; color: #888888; background: #ffffff; }
+.summary .ac, .summary .time, .summary .empty { font-size: 11.2px; }
+.summary .fastest { font-weight: 700; font-size: 10px; line-height: 16px; }
 """
 
 def flag_url(country):
@@ -124,6 +128,18 @@ def rating_cell(row):
     )
 
 
+def fit_font_size(text, width=52.0, base=10.0):
+    """幅 width に収まるよう文字サイズを縮める。
+
+    AtCoder の fit-font-size（JavaScript）と同じ挙動を近似する。
+    係数 0.55 は実測値から逆算した「1文字あたりの幅 ÷ 文字サイズ」。
+    """
+    estimated = len(text) * base * 0.55
+    if estimated <= width:
+        return base
+    return round(width / (len(text) * 0.55), 2)
+
+
 def summary_rows(summary):
     """最速正解者と正解者数の行を返す。"""
     fastest = ""
@@ -133,23 +149,39 @@ def summary_rows(summary):
         if item["user"] is None:
             fastest += '<td class="empty">-</td>'
         else:
+            color = rating_color(item["rating"])
+            size = fit_font_size(item["user"])
             fastest += (
-                f'<td><div class="time">{html.escape(item["user"])}</div>'
+                f'<td><div class="fastest" '
+                f'style="color:{color};font-size:{size}px">'
+                f'{html.escape(item["user"])}</div>'
                 f'<div class="time">{item["time"]}</div></td>'
             )
-        counts += f'<td class="time">{item["accepted"]}/{item["tried"]}</td>'
+
+        counts += (
+            f'<td><span class="ac">{item["accepted"]}</span>'
+            f' / <span class="time">{item["tried"]}</span></td>'
+        )
 
     empty = '<td class="empty">-</td><td class="empty">-</td>'
     return (
         f'<tr class="summary"><td colspan="3">最速正解者</td>{fastest}{empty}</tr>'
-        f'<tr class="summary"><td colspan="3">正解者数/提出者数</td>{counts}{empty}</tr>'
+        f'<tr class="summary"><td colspan="3">'
+        '<span class="ac">正解者数</span> / <span class="time">提出者数</span>'
+        f"</td>{counts}{empty}</tr>"
     )
 
 
 def build_html(tasks, rows, summary):
     """順位表の HTML を組み立てる。"""
-    headers = ["順位", "ユーザ", "得点"] + tasks + ["perf", "レート変化"]
-    head = "".join(f"<th>{name}</th>" for name in headers)
+    head = (
+        '<th style="width:49px">順位</th>'
+        '<th style="width:303px">ユーザ</th>'
+        '<th style="width:60px">得点</th>'
+        + "".join(f'<th style="width:60px">{name}</th>' for name in tasks)
+        + '<th style="width:84px">perf</th>'
+        + '<th style="width:168px">レート変化</th>'
+    )
 
     body = ""
     for index, row in enumerate(rows, start=1):

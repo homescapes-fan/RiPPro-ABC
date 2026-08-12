@@ -63,7 +63,7 @@ def build_summary(tasks, rows):
     for index, name in enumerate(tasks):
         cells = [row["cells"][index] for row in rows]
         solved = [
-            (cell["elapsed"], row["user"], cell["time"])
+            (cell["elapsed"], row["user"], cell["time"], row["old_rating"])
             for row, cell in zip(rows, cells)
             if cell["solved"]
         ]
@@ -74,6 +74,7 @@ def build_summary(tasks, rows):
                 "task": name,
                 "user": fastest[1] if fastest else None,
                 "time": fastest[2] if fastest else None,
+                "rating": fastest[3] if fastest else None,
                 "accepted": len(solved),
                 "tried": sum(1 for cell in cells if cell["tried"]),
             }
