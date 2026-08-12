@@ -43,7 +43,7 @@ def format_task_result(result):
 def format_total(total):
     """得点欄の表示を決める。"""
     if total["Count"] == 0:
-        return {"score": "-", "penalty": "", "time": ""}
+        return {"score": "", "penalty": "", "time": ""}
 
     score = total["Score"] // 100
     if score == 0:
@@ -55,6 +55,7 @@ def format_total(total):
         "penalty": f"({penalty})" if penalty else "",
         "time": format_elapsed(total["Elapsed"]),
     }
+
 
 def build_summary(tasks, rows):
     """各問題の最速正解者と、正解者数・提出者数を求める。"""

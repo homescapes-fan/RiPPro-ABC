@@ -45,7 +45,8 @@ tbody tr:nth-child(odd) { background: #f9f9f9; }
 .user { text-align: left; padding: 0px 8px 0px 12px; font-weight: bold; }
 .user img { height: 14px; vertical-align: -2px; margin-right: 4px; }
 .user .flag { height: 12px; margin-right: 3px; }
-.rank { font-weight: 700; }
+.rank { color: #333333; font-weight: 400; font-size: 11.2px; }
+.rank-all { color: #aaaaaa; font-weight: 400; font-size: 11.2px; }
 .score { color: #0000ff; font-weight: 700; font-size: 12.6px; }
 .ac { color: #00aa3e; font-weight: 700; font-size: 12.6px; }
 .wa { color: #ff0000; font-weight: 400; font-size: 12.6px; }
@@ -142,10 +143,10 @@ def fit_font_size(text, width=52.0, base=10.0):
     AtCoder の fit-font-size（JavaScript）と同じ挙動を近似する。
     係数 0.55 は実測値から逆算した「1文字あたりの幅 ÷ 文字サイズ」。
     """
-    estimated = len(text) * base * 0.55
+    estimated = len(text) * base * 0.6
     if estimated <= width:
         return base
-    return round(width / (len(text) * 0.55), 2)
+    return round(width / (len(text) * 0.6), 2)
 
 
 def summary_rows(summary):
@@ -232,7 +233,7 @@ def build_html(tasks, rows, summary):
         body += (
             "<tr>"
             f'<td><div class="rank">{index}</div>'
-            f'<div class="time">({row["rank"]})</div></td>'
+            f'<div class="rank-all">({row["rank"]})</div></td>'
             f'<td class="user" style="color:{color}">{images}'
             f'{html.escape(row["user"])}</td>'
             f"<td>{total_html}</td>"
