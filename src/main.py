@@ -132,7 +132,9 @@ def main():
     print(" | ".join(["順位", "ユーザ", "得点"] + tasks + ["perf", "レート変化"]))
 
     for index, row in enumerate(rows, start=1):
-        cell_texts = [f"{c['score']} {c['time']}".strip() for c in row["cells"]]
+        cell_texts = [
+            f"{c['score']}{c['penalty']} {c['time']}".strip() for c in row["cells"]
+        ]
 
         if row["new_rating"] is None:
             change = f"{row['old_rating']} (unrated)"
@@ -142,7 +144,11 @@ def main():
 
         print(
             " | ".join(
-                [f"{index}({row['rank']})", row["user"], row["total"]["score"]]
+                [
+                    f"{index}({row['rank']})",
+                    row["user"],
+                    f"{row['total']['score']}{row['total']['penalty']}" or "-",
+                ]
                 + cell_texts
                 + [str(row["perf"]), change]
             )

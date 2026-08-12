@@ -9,41 +9,50 @@ def format_elapsed(nanoseconds):
 def format_task_result(result):
     """1問分の結果を、順位表のセル1つ分に整える。"""
     if result is None:
-        return {"score": "", "time": "", "solved": False, "tried": False}
+        return {
+            "score": "",
+            "penalty": "",
+            "time": "",
+            "elapsed": None,
+            "solved": False,
+            "tried": False,
+            }
 
     score = result["Score"] // 100
     if score > 0:
         penalty = result["Penalty"]
         return {
-            "score": f"{score}({penalty})" if penalty else str(score),
+            "score": str(score),
+            "penalty": f"({penalty})" if penalty else "",
             "time": format_elapsed(result["Elapsed"]),
+            "elapsed": result["Elapsed"],
             "solved": True,
             "tried": True,
-            "elapsed": result["Elapsed"],
         }
 
     return {
-        "score": f"({result['Failure']})",
+        "score": "",
+        "penalty": f"({result['Failure']})",
         "time": "",
+        "elapsed": None,
         "solved": False,
         "tried": True,
-        "elspsed": None,
     }
 
 
 def format_total(total):
     """得点欄の表示を決める。"""
     if total["Count"] == 0:
-        return {"score": "-", "time": ""}
+        return {"score": "-", "penalty": "", "time": ""}
 
     score = total["Score"] // 100
-    penalty = total["Penalty"]
-
     if score == 0:
-        return {"score": f"({penalty})", "time": ""}
-
+        return {"score": "", "penalty": "(0)", "time": ""}
+    
+    penalty = total["Penalty"]
     return {
-        "score": f"{score}({penalty})" if penalty else str(score),
+        "score": str(score),
+        "penalty": f"({penalty})" if penalty else "",
         "time": format_elapsed(total["Elapsed"]),
     }
 

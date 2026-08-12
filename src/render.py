@@ -29,24 +29,28 @@ CROWNS = [
 
 STYLE = """
 body { margin: 0; background: #ffffff; }
-table { border-collapse: collapse;
-         font-family: "Yu Gothic UI", "Meiryo", sans-serif; font-size; 13px; }
-th, td { border: 1px solid #dddddd; padding: 4px 10px;
-         text-align: center; white-space: nowrap; }
-th { background: #f5f5f5; }
-.user { text-align: left; font-weight: bold; }
-.value { font-weight: bold; }
-.time { color: #888888; font-size: 11px; }
-.solved .value { color: #008000; }
-.failed .value { color: #dd0000; }
-.empty { color: #cccccc; }
-.up { color: #0080000; }
-.down { color: #dd0000; }
-.flat { color: #888888; }
-.muted { color: #888888; }
-.summary td { background: #fafafa; }
+table { border-collapse: collapse; background: #ffffff;
+        font-family: Lato, "Helvetica Neue", arial, "Noto Sans JP", sans-serif;
+        font-size: 14px; color: #333333; }
+th, td { border: 1px solid #dddddd; text-align: center;
+         white-space: nowrap; vertical-align: middle; line-height: 20px; }
+th { padding: 8px 10px 8px 8px; }
+td { padding: 4px 8px; }
+tbody tr:nth-child(odd) { background: #f9f9f9; }
+.user { text-align: left; padding: 8px 8px 8px 12px; font-weight: bold; }
 .user img { height: 14px; vertical-align: -2px; margin-right: 4px; }
 .user .flag { height: 12px; margin-right: 3px; }
+.rank { font-weight: 700; }
+.score { color: #0000ff; font-weight: 700; font-size: 12.6px; }
+.ac { color: #00aa3e; font-weight: 700; font-size: 12.6px; }
+.wa { color: #ff0000; font-weight: 400; font-size: 12.6px; }
+.time { color: #888888; font-weight: 400; font-size: 12.6px; }
+.empty { color: #888888; font-size: 12.6px; }
+.up { color: #00aa3e; }
+.down { color: #ff0000; }
+.flat { color: #888888; }
+.muted { color: #888888; }
+.summary td { background: #ffffff; }
 """
 
 def flag_url(country):
@@ -89,12 +93,15 @@ def task_cell(cell):
     if not cell["tried"]:
         return '<td class="empty">-</td>'
 
-    body = f'<div class="time">{cell["score"]}</div>'
+    body = ""
+    if cell["score"]:
+        body += f'<span class="ac">{cell["score"]}</span>'
+    if cell["penalty"]:
+        body += f'<span class="wa">{cell["penalty"]}</span>'
     if cell["time"]:
         body += f'<div class="time">{cell["time"]}</div>'
 
-    css_class = "solved" if cell["solved"] else "failed"
-    return f'<td class="{css_class}">{body}</td>'
+    return f"<td>{body}</td>"
 
 
 def rating_cell(row):
@@ -147,33 +154,45 @@ def build_html(tasks, rows, summary):
     body = ""
     for index, row in enumerate(rows, start=1):
         color = rating_color(row["old_rating"])
+
         images = ""
         flag = flag_url(row["country"])
         if flag:
             images += f'<img class="flag" src="{flag}">'
-
         icon = user_icon_url(row["old_rating"], row["atcoder_rank"])
         if icon:
             images += f'<img src="{icon}">'
 
+        total = row["total"]
+        if total["score"] or total["penalty"]:
+            total_html = ""
+            if total["score"]:
+                total_html += f'<span class="score">{total["score"]}</span>'
+            if total["penalty"]:
+                total_html += f'<span class="wa">{total["penalty"]}</span>'
+            if total["time"]:
+                total_html += f'<div class="time">{total["time"]}</div>'
+        else:
+            total_html = '<span class="empty">-</span>'
+
         body += (
             "<tr>"
-            f'<td><div class="value">{index}</div>'
+            f'<td><div class="rank">{index}</div>'
             f'<div class="time">({row["rank"]})</div></td>'
             f'<td class="user" style="color:{color}">{images}'
             f'{html.escape(row["user"])}</td>'
-            f'<td><div class="value">{row["total"]["score"]}</div>'
-            f'<div class="time">{row["total"]["time"]}</div></td>'
+            f"<td>{total_html}</td>"
             + "".join(task_cell(cell) for cell in row["cells"])
-            + f'<td class="value" style="color:{rating_color(row["perf"])}">'
+            + f'<td class="score" style="color:{rating_color(row["perf"])}">'
             f'{row["perf"]}</td>'
             f"<td>{rating_cell(row)}</td>"
             "</tr>"
         )
 
     return (
-        f"<style>{STYLE}</style><table><tr>{head}</tr>"
-        f"{body}{summary_rows(summary)}</table>"
+        f"<style>{STYLE}</style><table>"
+        f"<thead><tr>{head}</tr></thead>"
+        f"<tbody>{body}{summary_rows(summary)}</tbody></table>"
         )
 
 
