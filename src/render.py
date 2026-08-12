@@ -43,8 +43,8 @@ th { padding: 0px 10px 0px 8px; }
 td { padding: 0px 6px; }
 tbody tr:nth-child(odd) { background: #f9f9f9; }
 .user { text-align: left; padding: 0px 8px 0px 12px; font-weight: bold; }
-.user img { height: 14px; vertical-align: -2px; margin-right: 4px; }
-.user .flag { height: 12px; margin-right: 3px; }
+.user img { width: 15px; height: 15px; vertical-align: -2px; margin-right: 4px; }
+.user .flag { width: 16px; height: 16px; vertical-align: -6px; margin-right: 3px; }
 .rank { color: #333333; font-weight: 400; font-size: 11.2px; }
 .rank-all { color: #aaaaaa; font-weight: 400; font-size: 11.2px; }
 .score { color: #0000ff; font-weight: 700; font-size: 12.6px; }
@@ -213,10 +213,10 @@ def build_html(tasks, rows, summary):
         images = ""
         flag = flag_url(row["country"])
         if flag:
-            images += f'<img class="flag" src="{flag}">'
+            images += f'<img alt="" class="flag" src="{flag}">'
         icon = user_icon_url(row["old_rating"], row["atcoder_rank"])
         if icon:
-            images += f'<img src="{icon}">'
+            images += f'<img alt="" src="{icon}">'
 
         total = row["total"]
         if total["score"] or total["penalty"]:
