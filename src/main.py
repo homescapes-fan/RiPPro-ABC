@@ -77,6 +77,7 @@ def attach_rating(rows, contest_id):
         history = history_before(fetch_history(row["user"]), contest_id)
         old, new = predict_new_rating(history, row["raw_perf"])
 
+        row["rated_count"] = sum(1 for entry in history if entry["IsRated"])
         row["old_rating"] = old
         row["new_rating"] = new if row["is_rated"] else None
 

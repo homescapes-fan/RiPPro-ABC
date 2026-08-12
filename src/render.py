@@ -23,6 +23,7 @@ RATING_BANDS = [
 
 TOP_BAND =("red", "#ff0000")
 
+
 CROWNS = [
     (1, "crown_champion"),
     (10, "crown_gold"),
@@ -86,8 +87,18 @@ def rating_color(value):
     return rating_band(value)[1]
 
 
-def user_icon_url(rating, atcoder_rank):
-    """ユーザー名の左の瓦または王冠のURLを返す。無い場合はNone"""
+def user_color(rating, rated_count):
+    """ユーザーの表示色を返す。rated 参加が一度もなければ黒。"""
+    if rated_count == 0:
+        return "#000000"
+    return rating_color(rating)
+
+
+def user_icon_url(rating, atcoder_rank, rated_count):
+    """ユーザー名の左に出すアイコンの URL を返す。無い場合は None。"""
+    if rated_count == 0:
+        return None
+
     if atcoder_rank:
         for limit, name in CROWNS:
             if atcoder_rank <= limit:
@@ -120,10 +131,11 @@ def task_cell(cell):
 def rating_cell(row):
     """レート変化のセルの中身を返す。"""
     old = row["old_rating"]
+    old_color = user_color(old, row["rated_count"])
 
     if row["new_rating"] is None:
         return (
-            f'<span class="rating" style="color:{rating_color(old)}">{old}</span>'
+            f'<span class="rating" style="color:{old_color}">{old}</span>'
             ' <span class="diff">(unrated)</span>'
         )
 
@@ -131,7 +143,7 @@ def rating_cell(row):
     diff = new - old
 
     return (
-        f'<span class="rating" style="color:{rating_color(old)}">{old}</span>'
+        f'<span class="rating" style="color:{old_color}">{old}</span>'
         f' → <span class="rating" style="color:{rating_color(new)}">{new}</span>'
         f' <span class="diff">({diff:+d})</span>'
     )
@@ -158,7 +170,7 @@ def summary_rows(summary):
         if item["user"] is None:
             fastest += '<td class="empty">-</td>'
         else:
-            color = rating_color(item["rating"])
+            color = user_color(item["rating"], item["rated_count"])
             size = fit_font_size(item["user"])
             fastest += (
                 f'<td><div class="fastest" '
@@ -208,13 +220,15 @@ def build_html(tasks, rows, summary):
 
     body = ""
     for index, row in enumerate(rows, start=1):
-        color = rating_color(row["old_rating"])
+        color = user_color(row["old_rating"], row["rated_count"])
 
         images = ""
         flag = flag_url(row["country"])
+
         if flag:
             images += f'<img alt="" class="flag" src="{flag}">'
-        icon = user_icon_url(row["old_rating"], row["atcoder_rank"])
+            icon = user_icon_url(row["old_rating"], row["atcoder_rank"], row["rated_count"])
+
         if icon:
             images += f'<img alt="" src="{icon}">'
 
