@@ -116,6 +116,8 @@ def main():
 
     if submissions < MIN_SUBMISSIONS:
         print(f"{contest_id} はまだ開催されていません")
+        if auto and should_post:
+            notify_owner(f"今週は ABC が開催されませんでした（{contest_id.upper()} は未開催）")
         return
 
     members = load_members()
