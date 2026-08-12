@@ -20,6 +20,11 @@ load_dotenv(ENV_PATH)
 
 USER_AGENT = "RiPPro-ABC-Bot(https://github.com/homescapes-fan/RiPPro-ABC)"
 
+# コンテストが実際に行われたと判断する提出数のしきい値
+# Tester や解説放送の担当者が開始前に提出することがあるため敢えてこの値にしている。
+MIN_SUBMISSIONS = 1000
+
+
 def fetch_results(contest_id):
     """指定したコンテストの全参加者の結果を取得し、リストで返す"""
     url = f"https://atcoder.jp/contests/{contest_id}/results/json"
@@ -83,6 +88,11 @@ def history_before(history, contest_id):
         if entry["ContestScreenName"] == screen_name:
             return history[:index]
     return history
+
+
+def total_submissions(standings):
+    """全参加者の提出回数の合計を返す。"""
+    return sum(row["TotalResult"]["Count"] for row in standings["StandingsData"])
 
 
 def main():

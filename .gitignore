@@ -4,6 +4,9 @@
 # 個人情報（見本はmembers.example.json）
 members.json
 
+# 実行状態（見本はstate.exampple.json）
+state.json
+
 # Python
 __pycache__/
 *.py[cod]
