@@ -190,6 +190,9 @@ def main():
         posted = post_message(thread_id, message, image_path=output, ping=True)
         print("スレッドID:", thread_id, "/ メッセージID:", posted["id"])
 
+    if auto and should_post:
+        state["last_contest"] = contest_id
+        save_state(state)
 
 
 if __name__ == "__main__":
